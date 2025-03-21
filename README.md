@@ -2,5 +2,5 @@
 ### Team Members
 * Miles Bovero
 * Burke Dambly
-* 
+* Lawrence Ponce
 * 
