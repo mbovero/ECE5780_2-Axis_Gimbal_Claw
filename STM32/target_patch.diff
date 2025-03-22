@@ -1,0 +1,41 @@
+diff --git a/Makefile b/Makefile
+index c30d383..f69cbea 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,3 +1,5 @@
++TARGET ?= LAB1
++
+ PREFIX = arm-none-eabi-
+ CC = $(PREFIX)gcc
+ AS = $(PREFIX)gcc -x assembler-with-cpp
+@@ -8,11 +10,6 @@ HEX = $(CP) -O ihex
+ BIN = $(CP) -O binary -S
+ ST_FLASH = st-flash
+ 
+-######################################
+-# target
+-######################################
+-TARGET = Lab
+-
+ ######################################
+ # building variables
+ ######################################
+@@ -79,7 +76,8 @@ AS_DEFS =
+ # C defines
+ C_DEFS =  \
+ -DUSE_HAL_DRIVER \
+--DSTM32F072xB
++-DSTM32F072xB \
++-D${TARGET}
+ 
+ 
+ # AS includes
+@@ -121,7 +119,7 @@ LIBDIR =
+ LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS)
+ 
+ flash: $(BUILD_DIR)/$(TARGET).bin
+-	$(ST_FLASH) --reset --flash=128k write $< 0x8000000 --connect-under-reset
++	$(ST_FLASH) --reset --flash=128k --connect-under-reset write $< 0x8000000
+ 
+ #######################################
+ # build the application
