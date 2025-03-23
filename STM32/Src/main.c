@@ -16,6 +16,8 @@ int main(void)
 {
   #if defined(PWM_SIGNAL_GEN)
   pwm_signal_gen();
+  #elif defined(STM_IMU_I2C)
+  stm_imu_i2c_main();
 
   /*
   #elif defined(othername)
