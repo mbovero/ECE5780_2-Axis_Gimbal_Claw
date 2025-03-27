@@ -18,6 +18,10 @@ int main(void)
   pwm_signal_gen();
   #elif defined(STM_IMU_I2C)
   stm_imu_i2c_main();
+  #elif defined(BLINK_TEST)
+  blink_test();
+  #elif defined(JOYSTICK_LED)
+  joystick_led();
 
   /*
   #elif defined(othername)
