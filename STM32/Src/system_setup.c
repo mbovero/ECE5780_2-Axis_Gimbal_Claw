@@ -95,3 +95,27 @@ void _close(void) { Error_Handler(); }
 void _lseek(void) { Error_Handler(); }
 void _read(void) { Error_Handler(); }
 void _write(void) { Error_Handler(); }
+
+/**
+ * Uses RCC to enable the GPIOA peripheral clocks
+ */
+void My_HAL_RCC_GPIOA_CLK_Enable() 
+{  
+  RCC->AHBENR |= (1<<17);
+}
+
+/**
+ * Uses RCC to enable the GPIOB peripheral clocks
+ */
+void My_HAL_RCC_GPIOB_CLK_Enable() 
+{  
+  RCC->AHBENR |= (1<<18);
+}
+
+/**
+ * Uses RCC to enable the GPIOC peripheral clocks
+ */
+void My_HAL_RCC_GPIOC_CLK_Enable() 
+{  
+  RCC->AHBENR |= (1<<19);
+}
