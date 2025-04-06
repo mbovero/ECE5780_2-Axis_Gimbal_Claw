@@ -5,11 +5,27 @@
 
 void I2C2_Write_IMU(uint8_t *pData, uint16_t len);
 uint16_t I2C2_Read_IMU(uint8_t *pData, uint16_t len);
+void parse_rot_vec(uint16_t *qi, uint16_t *qj, uint16_t *qk, uint16_t *qr, uint8_t *pData, uint16_t len);
+uint16_t q14_mul(uint16_t a, uint16_t b);
+uint16_t quaternion_dot_q14(
+    uint16_t w1, uint16_t x1, uint16_t y1, uint16_t z1,
+    uint16_t w2, uint16_t x2, uint16_t y2, uint16_t z2
+);
+void update_leds(uint16_t dot_q14);
+
+
+
 
 #define BNO08X_I2C_ADDR (0x4A) // 7-bit I2C address for BNO08X
 #define SHTP_HEADER_SIZE (4)
 
 int hal_enable = 0;
+uint16_t qi_target;
+uint16_t qj_target;
+uint16_t qk_target;
+uint16_t qr_target;
+uint8_t target_init = 0;
+
 
 // Buffer to store received IMU data
 uint8_t imu_data[14];
@@ -31,10 +47,9 @@ int stm_imu_i2c_main(void)
     GPIO_InitTypeDef initStrPB13 = {GPIO_PIN_13, GPIO_MODE_AF_OD, GPIO_PULLUP, GPIO_SPEED_FREQ_LOW, GPIO_AF5_I2C2};
     My_HAL_GPIO_Init(GPIOB, &initStrPB13); // Initialize pin PB13 as I2C2_SCL with an internal pull-up resistor
 
-    GPIO_InitTypeDef initStrLEDs = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW};
+    GPIO_InitTypeDef initStrLEDs = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW};
     My_HAL_GPIO_Init(GPIOC, &initStrLEDs); // Initialize PC pins for LED usage
 
-    //My_HAL_GPIO_WritePin(GPIOC, GPIO_)
 
     // Initialize I2C peripheral
     if (hal_enable)
@@ -177,12 +192,30 @@ int stm_imu_i2c_main(void)
     while (1)
     {
         uint8_t data[32];
+        uint16_t qi;
+        uint16_t qj;
+        uint16_t qk;
+        uint16_t qr;
+
         if (hal_enable)
         {
             HAL_I2C_Master_Receive(&hi2c2, 0x4A << 1, data, sizeof(data), HAL_MAX_DELAY);            
         }
         else{
            I2C2_Read_IMU(data, sizeof(data));
+        }
+        parse_rot_vec(&qi, &qj, &qk, &qr, data, sizeof(data));
+        if (!target_init)
+        {
+            qi_target = qi;
+            qj_target = qj;
+            qk_target = qk;
+            qr_target = qr;
+            target_init = 1;
+        } else
+        {
+            uint16_t res = quaternion_dot_q14(qi, qj, qk, qr, qi_target, qj_target, qk_target, qr_target);
+            update_leds(res);
         }
         
 
@@ -292,11 +325,49 @@ int stm_imu_i2c_main(void)
  }
 
 
- void parse_rot_vec(int16_t *qi, int16_t *qj, int16_t *qk, int16_t *qr, uint8_t *pData, uint16_t len)
+ void parse_rot_vec(uint16_t *qi, uint16_t *qj, uint16_t *qk, uint16_t *qr, uint8_t *pData, uint16_t len)
  {
-    if (pData[0] == 0x17 && pData[1] == 0 && pData[4] == 0xFB && pData[9] == 0x05)
+    if (len >= 21 && pData[0] == 0x17 && pData[1] == 0 && pData[4] == 0xFB && pData[9] == 0x05)
     {
-        qi* = (pData[9] << 8) | pData[8];
-        
+        *qi = (pData[14] << 8) | pData[13];
+        *qj = (pData[16] << 8) | pData[15];
+        *qk = (pData[18] << 8) | pData[17];
+        *qr = (pData[20] << 8) | pData[19];
     }
  }
+
+// Multiply two Q14s and return Q14
+uint16_t q14_mul(uint16_t a, uint16_t b) {
+    uint32_t temp = (uint32_t)a * b;
+    return (uint16_t)(temp >> 14);
+}
+
+// Compute dot product of two Q14 quaternions
+uint16_t quaternion_dot_q14(
+    uint16_t w1, uint16_t x1, uint16_t y1, uint16_t z1,
+    uint16_t w2, uint16_t x2, uint16_t y2, uint16_t z2
+) {
+    uint16_t dot = 0;
+    dot += q14_mul(w1, w2);
+    dot += q14_mul(x1, x2);
+    dot += q14_mul(y1, y2);
+    dot += q14_mul(z1, z2);
+    return dot;
+}
+
+void update_leds(uint16_t dot_q14) {
+    My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+    My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);
+    My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+
+    if (dot_q14 > 0x3C00) {
+        // dot > 0.9375 => very close
+        My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+    } else if (dot_q14 > 0x3000) {
+        // dot > 0.75 => kinda close
+        My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET);
+    } else {
+        // large difference
+        My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+    }
+}

@@ -1,4 +1,4 @@
-#include <math.h>
+//#include <arm_math.h>
 
 //Q2.14
 // #define FP_INT_TYPE      u_int16_t
@@ -16,6 +16,19 @@
 // #define FP_VAL_NEG_1     FP_FROM_INT(-1)
 
 // #define FP_SIGN(a)       (1 << (FP_NUM_BITS)-1)
+//arm_status status = arm_sin_cos_f32_init();
+
+// typedef struct {
+//     q15_t r, i, j, k;
+// }QuaternionQ15;
+
+// #define DEG_TO_Q15RAD(deg) ((q15_t)(((int32_t)(deg) * (16384) / 180) + 0.5f))  // Convert degrees to Q2.14 radians
+
+
+
+
+
+
 
 
 
