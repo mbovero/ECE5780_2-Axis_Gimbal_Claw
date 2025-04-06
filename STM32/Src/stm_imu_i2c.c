@@ -205,21 +205,21 @@ int stm_imu_i2c_main(void)
            I2C2_Read_IMU(data, sizeof(data));
         }
         parse_rot_vec(&qi, &qj, &qk, &qr, data, sizeof(data));
-        if (!target_init)
-        {
+        if (!target_init) {
             qi_target = qi;
             qj_target = qj;
             qk_target = qk;
             qr_target = qr;
             target_init = 1;
-        } else
-        {
-            uint16_t res = quaternion_dot_q14(qi, qj, qk, qr, qi_target, qj_target, qk_target, qr_target);
-            update_leds(res);
-        }
+        } else {
+            int16_t diff_i = (int16_t)qi - (int16_t)qi_target;
+            int16_t diff_j = (int16_t)qj - (int16_t)qj_target;
         
-
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
+            My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, (diff_i > 1000) ? GPIO_PIN_SET : GPIO_PIN_RESET);  // +i
+            My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, (diff_i < -1000) ? GPIO_PIN_SET : GPIO_PIN_RESET); // -i
+            My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, (diff_j > 1000) ? GPIO_PIN_SET : GPIO_PIN_RESET);  // +j
+            My_HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, (diff_j < -1000) ? GPIO_PIN_SET : GPIO_PIN_RESET); // -j
+        }
 
         HAL_Delay(1); // Delay
     }
