@@ -24,6 +24,8 @@ int main(void)
   joystick_led();
   #elif defined(STM_IMU_I2C_TEST)
   stm_imu_i2c_test();
+  #elif defined(MOTOR_TEST_I2C)
+  motor_test_i2c();
 
   /*
   #elif defined(othername)
