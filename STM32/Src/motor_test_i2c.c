@@ -7,30 +7,59 @@
 void parse_rot_vec(uint16_t *qi, uint16_t *qj, uint16_t *qk, uint16_t *qr, uint8_t *pData, uint16_t len);
 
 
-#define BNO08X_I2C_ADDR (0x4A) // 7-bit I2C address for BNO08X
-#define SHTP_HEADER_SIZE (4)
+// Constants
+#define BNO08X_I2C_ADDR    (0x4A << 1)  // 7-bit I2C address shifted for HAL
+#define Q_SHIFT            14
+#define ROLL_THRESH        2500        // Threshold to start moving
+#define MAX_ROLL_ERROR     5000        // Error at max speed
+#define MIN_PSC            10           // Fastest speed (higher PWM frequency)
+#define MAX_PSC            30           // Slowest speed
+#define DEADBAND           1750         // Error range where motor stops
 
-#define Q_SHIFT       14      // your Q1.15 format
-#define ROLL_THRESH   1500     // tune deadband to taste
+#define PITCH_THRESH       1500
+#define YAW_THRESH         1500
 
-uint16_t qi_target;
-uint16_t qj_target;
-uint16_t qk_target;
-uint16_t qr_target;
-uint8_t target_init = 0;
+// Target quaternion (initialized on first reading)
+uint16_t qi_target = 0, qj_target = 0, qk_target = 0, qr_target = 0;
+uint8_t target_init = 20;
 
-
-// Buffer to store received IMU data
-uint8_t imu_data[14];
 
 // I2C handle for I2C2
 I2C_HandleTypeDef hi2c2;
+
+// --- Helper: Compute sin(angle) error for roll/pitch/yaw ---
+int16_t compute_angle_error(int16_t cr, int16_t ci, int16_t cj, int16_t ck,
+                           int16_t tr, int16_t ti, int16_t tj, int16_t tk,
+                           uint8_t axis) {
+    int32_t sin_cur, sin_tar;
+
+    switch (axis) {
+        case 0: // Roll:  2*(w*x + y*z)
+            sin_cur = ((int32_t)cr * ci + (int32_t)cj * ck) * 2;
+            sin_tar = ((int32_t)tr * ti + (int32_t)tj * tk) * 2;
+            return (int16_t)((-(sin_cur - sin_tar)) >> Q_SHIFT);
+        case 1: // Pitch: 2*(w*y - z*x)
+            sin_cur = ((int32_t)cr * cj - (int32_t)ck * ci) * 2;
+            sin_tar = ((int32_t)tr * tj - (int32_t)tk * ti) * 2;
+            break;
+        case 2: // Yaw:   2*(w*z + x*y)
+            sin_cur = ((int32_t)cr * ck + (int32_t)ci * cj) * 2;
+            sin_tar = ((int32_t)tr * tk + (int32_t)ti * tj) * 2;
+            break;
+        default:
+            return 0;
+    }
+
+    return (int16_t)((sin_cur - sin_tar) >> Q_SHIFT);
+}
+
 
 int motor_test_i2c(void) {
      // 1) Initialize HAL (SysTick etc.)
      HAL_Init();
 
      // 2) Enable GPIOC, GPIOB, and TIM3 clocks
+     __HAL_RCC_GPIOA_CLK_ENABLE();
      __HAL_RCC_GPIOC_CLK_ENABLE();
      __HAL_RCC_GPIOB_CLK_ENABLE();
      __HAL_RCC_TIM3_CLK_ENABLE();
@@ -45,7 +74,7 @@ int motor_test_i2c(void) {
      HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
  
      // --- Configure PC7-MS1, PC8-MS2, PC9-ENABLE, PC10-DIR as digital outputs via HAL ---
-     GPIO_InitStruct.Pin   = GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10;
+     GPIO_InitStruct.Pin   = GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9;
      GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
      GPIO_InitStruct.Pull  = GPIO_NOPULL;
      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -54,7 +83,7 @@ int motor_test_i2c(void) {
      //HAL_GPIO_WritePin(GPIOC, GPIO_InitStruct.Pin, GPIO_PIN_RESET);
  
      // 3) Timer3 PWM bitwise setup for PC6 (1 kHz, 50% duty)
-     TIM3->PSC    = 79U;  // 8MHz/(79+1) = 100kHz timer clock
+     TIM3->PSC    = 29;  // 8MHz/(79+1) = 100kHz timer clock
      TIM3->ARR    = 99U;  // 100kHz/(99+1) = 1kHz PWM
      // PWM Mode1 on CH1, preload enable
      TIM3->CCMR1 &= ~TIM_CCMR1_OC1M;
@@ -62,15 +91,15 @@ int motor_test_i2c(void) {
      // 50% duty: CCR1 = (ARR+1)/2
      TIM3->CCR1   = (TIM3->ARR + 1U) >> 1;
      // Enable CH1 output, start counter
-     TIM3->CCER |= TIM_CCER_CC1E;
+     
      TIM3->CR1 |= 1;
   
      
     
-     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET); // toggle MS1
-     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);   // set MS2
-     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); // clear ENABLE
-     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);  // set DIR
+     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); // toggle MS1
+     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   // set MS2
+     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // clear ENABLE
+     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);  // set DIR
 
      
 
@@ -151,32 +180,36 @@ int motor_test_i2c(void) {
     uint8_t feat_req[21];
     do
     {
-        HAL_I2C_Master_Transmit(&hi2c2, 0x4A << 1, enable_rotation_vector, sizeof(enable_rotation_vector), HAL_MAX_DELAY);
-        HAL_I2C_Master_Transmit(&hi2c2, 0x4A << 1, get_feat_req, sizeof(get_feat_req), HAL_MAX_DELAY);
-        HAL_I2C_Master_Receive(&hi2c2, 0x4A << 1, feat_req, sizeof(feat_req), HAL_MAX_DELAY);
+        HAL_I2C_Master_Transmit(&hi2c2, BNO08X_I2C_ADDR, enable_rotation_vector, sizeof(enable_rotation_vector), HAL_MAX_DELAY);
+        HAL_I2C_Master_Transmit(&hi2c2, BNO08X_I2C_ADDR, get_feat_req, sizeof(get_feat_req), HAL_MAX_DELAY);
+        HAL_I2C_Master_Receive(&hi2c2, BNO08X_I2C_ADDR, feat_req, sizeof(feat_req), HAL_MAX_DELAY);
     } while (!(feat_req[0] == 0x15 && feat_req[4] == 0xFC && feat_req[5] == 0x05 && feat_req[9] == 0x10));
     
     
     while (1)
     {
         uint8_t data[32];
-        uint16_t qi;
-        uint16_t qj;
-        uint16_t qk;
-        uint16_t qr;
+        uint16_t qi, qj, qk, qr;
        
-        HAL_I2C_Master_Receive(&hi2c2, 0x4A << 1, data, sizeof(data), HAL_MAX_DELAY);            
+        HAL_StatusTypeDef i2c_status = HAL_I2C_Master_Receive(&hi2c2, 0x4A << 1, data, sizeof(data), HAL_MAX_DELAY);
+        if (i2c_status != HAL_OK)
+        {
+            TIM3->CCER &= ~TIM_CCER_CC1E;
+            continue;
+        }
+
         parse_rot_vec(&qi, &qj, &qk, &qr, data, sizeof(data));
-        if (!target_init) {
+        if (target_init > 0) { 
             qi_target = qi;
             qj_target = qj;
             qk_target = qk;
             qr_target = qr;
-            target_init = 1;
+            target_init--;
+            //target_init = 1;
         }
         
         else {
-            
+
             // current quaternion (Q1.15)
             int16_t ci = (int16_t)qi;
             int16_t cj = (int16_t)qj;
@@ -189,34 +222,82 @@ int motor_test_i2c(void) {
             int16_t tk = (int16_t)qk_target;
             int16_t tr = (int16_t)qr_target;
         
-            // sin(roll)_current  = 2*(w*x + y*z)
-            int32_t sin_r_cur = ((int32_t)cr*ci + (int32_t)cj*ck) * 2;
-            // sin(roll)_target   = 2*(w_t*x_t + y_t*z_t)
-            int32_t sin_r_tar = ((int32_t)tr*ti + (int32_t)tj*tk) * 2;
-        
-            // bring back to Q1.15
-            sin_r_cur >>= Q_SHIFT;
-            sin_r_tar >>= Q_SHIFT;
-        
-            int16_t err = (int16_t)(sin_r_cur - sin_r_tar);
-        
-            // PC8 lights when roll > +thresh; PC9 when roll < -thresh
+            // Compute errors
+            int16_t err_roll  = compute_angle_error(cr, ci, cj, ck, tr, ti, tj, tk, 0);
+            // int16_t err_pitch = compute_angle_error(cr, ci, cj, ck, tr, ti, tj, tk, 1);
+            // int16_t err_yaw   = compute_angle_error(cr, ci, cj, ck, tr, ti, tj, tk, 2);
+                
 
-            if(err >  ROLL_THRESH || err < -ROLL_THRESH){
-
-                TIM3->CCER &= ~TIM_CCER_CC1E;   // disable channel 1 output
-                
-                HAL_Delay(100);
-                //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET); 
-                HAL_Delay(100);
-                
-                TIM3->CCER |= TIM_CCER_CC1E;   
-                
+            if(err_roll >  ROLL_THRESH)
+            {
+                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);  // set DIR
+                TIM3->CCER |= TIM_CCER_CC1E;
             }
-            
-            
+            else if (err_roll < -ROLL_THRESH)
+            {
+                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);  // reset DIR
+                TIM3->CCER |= TIM_CCER_CC1E;
+            }
+            else
+            {
+                TIM3->CCER &= ~TIM_CCER_CC1E;
+            }
 
-            
+            // // Handle positive and negative errors separately without abs()
+            // if (err_roll > ROLL_THRESH) {
+            //     // Positive error - rotate one direction
+            //     uint16_t psc_value;
+            //     int16_t effective_error = err_roll - ROLL_THRESH;
+                
+            //     if (effective_error >= (MAX_ROLL_ERROR - ROLL_THRESH)) {
+            //         psc_value = MIN_PSC; // Max speed
+            //     } else {
+            //         // Linear interpolation between MIN_PSC and MAX_PSC
+            //         psc_value = MAX_PSC - (effective_error * (MAX_PSC - MIN_PSC)) / 
+            //                     (MAX_ROLL_ERROR - ROLL_THRESH);
+            //     }
+                
+            //     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET); // Direction 1
+            //     TIM3->PSC = psc_value;
+            //     TIM3->CCER |= TIM_CCER_CC1E; // Enable PWM
+            //     TIM3->EGR = TIM_EGR_UG; // Force timer reload
+            // } 
+            // else if (err_roll < -ROLL_THRESH) {
+            //     // Negative error - rotate opposite direction
+            //     uint16_t psc_value;
+            //     int16_t effective_error = -err_roll - ROLL_THRESH;
+                
+            //     if (effective_error >= (MAX_ROLL_ERROR - ROLL_THRESH)) {
+            //         psc_value = MIN_PSC; // Max speed
+            //     } else {
+            //         // Linear interpolation between MIN_PSC and MAX_PSC
+            //         psc_value = MAX_PSC - (effective_error * (MAX_PSC - MIN_PSC)) / 
+            //                     (MAX_ROLL_ERROR - ROLL_THRESH);
+            //     }
+                
+            //     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET); // Direction 0
+            //     TIM3->PSC = psc_value;
+            //     TIM3->CCER |= TIM_CCER_CC1E; // Enable PWM
+            //     TIM3->EGR = TIM_EGR_UG; // Force timer reload
+            // }
+            // else if (err_roll > DEADBAND) {
+            //     // Small positive error - slowest speed
+            //     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
+            //     TIM3->PSC = MAX_PSC;
+            //     TIM3->CCER |= TIM_CCER_CC1E;
+            //     TIM3->EGR = TIM_EGR_UG;
+            // }
+            // else if (err_roll < -DEADBAND) {
+            //     // Small negative error - slowest speed
+            //     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);
+            //     TIM3->PSC = MAX_PSC;
+            //     TIM3->CCER |= TIM_CCER_CC1E;
+            //     TIM3->EGR = TIM_EGR_UG;
+            // }
+            // else {
+            //     // Within deadband - stop motor
+            //     TIM3->CCER &= ~TIM_CCER_CC1E;
+            // }        
         }
         
 
