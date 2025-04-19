@@ -31,11 +31,11 @@ int stm_imu_i2c_test(void) {
     // 5) Set initial control signals
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);  // MS1 = 0 (Full step)
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET);  // MS2 = 0 (Full step)
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);   // DIR = 1 (Set direction)
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);   // DIR = 1 (Set direction)
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);  // ENABLE = 0 (Motor enabled)
 
     // 6) Setup TIM3 for 1kHz PWM on PC6
-    TIM3->PSC = 1;        // 8 MHz / (79+1) = 100 kHz timer clock
+    TIM3->PSC = 10;        // 8 MHz / (79+1) = 100 kHz timer clock
     TIM3->ARR = 99;        // 100 kHz / (99+1) = 1 kHz PWM
     TIM3->CCR1 = 50;       // 50% duty cycle
 
@@ -45,12 +45,12 @@ int stm_imu_i2c_test(void) {
     TIM3->CR1 |= TIM_CR1_CEN;      // Enable counter
 
     while (1) {
-        // Loop forever, motor should spin depending on stepper driver and wiring
-        HAL_Delay(1000);
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);   // DIR = 1 (Set direction)
-        TIM3->PSC = 10;
-        HAL_Delay(1000);
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);   // DIR = 1 (Set direction)
-        TIM3->PSC = 1;
+        // // Loop forever, motor should spin depending on stepper driver and wiring
+        // HAL_Delay(1000);
+        // HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);   // DIR = 1 (Set direction)
+        // TIM3->PSC = 10;
+        // HAL_Delay(1000);
+        // HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);   // DIR = 1 (Set direction)
+        // TIM3->PSC = 5;
     }
 }
