@@ -26,6 +26,11 @@ int main(void)
   stm_imu_i2c_test();
   #elif defined(MOTOR_TEST_I2C)
   motor_test_i2c();
+  #elif defined(TEST)
+  test();
+  #elif defined(GIMBAL_CONTROLLER)
+  gimbal_controller();
+
 
   /*
   #elif defined(othername)

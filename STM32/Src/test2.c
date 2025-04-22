@@ -3,7 +3,6 @@
 // #include <assert.h>
 // #include "hal_gpio.h"
 // #include <string.h>
-// #include <math.h>
 
 
 
@@ -84,28 +83,55 @@
 // #define YAW_THRESH         1500
 
 // // Target quaternion (initialized on first reading)
-// int16_t qi_target = 0, qj_target = 0, qk_target = 0, qr_target = 0;
+// uint16_t qi_target = 0, qj_target = 0, qk_target = 0, qr_target = 0;
 // uint8_t target_init = 0;
 
 
 // // I2C handle for I2C2
 // I2C_HandleTypeDef hi2c2;
 
+// // --- Helper: Compute sin(angle) error for roll/pitch/yaw ---
 // int16_t compute_roll_error(int16_t cr, int16_t ci, int16_t cj, int16_t ck,
 //     int16_t tr, int16_t ti, int16_t tj, int16_t tk) {
-// // Numerator approximation: 2 * (r*i + j*k)
-// int32_t sin_cur = ((int32_t)cr * ci + (int32_t)cj * ck) >> (Q_SHIFT - 1);
-// int32_t sin_tar = ((int32_t)tr * ti + (int32_t)tj * tk) >> (Q_SHIFT - 1);
-
-// // Denominator approximation: 1 - 2*(i^2 + j^2)
-// int32_t cos_cur = ((int32_t)cr * cr - (int32_t)ci * ci - (int32_t)cj * cj + (int32_t)ck * ck) >> Q_SHIFT;
-// int32_t cos_tar = ((int32_t)tr * tr - (int32_t)ti * ti - (int32_t)tj * tj + (int32_t)tk * tk) >> Q_SHIFT;
-
-// // Approximate angle error in fixed-point range, avoid division
-// int16_t delta = (int16_t)(((sin_cur * cos_tar - sin_tar * cos_cur)) >> Q_SHIFT);
-
-// return delta;
+// // Flip sign if needed for shortest path
+// if ((int32_t)cr * tr + (int32_t)ci * ti + (int32_t)cj * tj + (int32_t)ck * tk < 0) {
+// tr = -tr; ti = -ti; tj = -tj; tk = -tk;
 // }
+
+// // Rotate into relative quaternion: q_rel = q_cur⁻¹ * q_tar
+// int32_t rr = (cr * tr + ci * ti + cj * tj + ck * tk) >> Q_SHIFT;
+// int32_t ri = (-cr * ti + ci * tr - cj * tk + ck * tj) >> Q_SHIFT;
+// // We only care about roll (i-axis), so just use relative r and i
+
+// // Approximate roll angle: sin(roll) ≈ 2 * r * i
+// return (int16_t)((2 * rr * ri) >> Q_SHIFT);
+// }
+
+// int16_t get_roll_deg(int16_t cr, int16_t ci, int16_t cj, int16_t ck,
+//     int16_t tr, int16_t ti, int16_t tj, int16_t tk)
+// {
+// // Flip signs if dot product is negative
+// int32_t dot = (int32_t)cr * tr + (int32_t)ci * ti +
+//  (int32_t)cj * tj + (int32_t)ck * tk;
+// if (dot < 0) {
+// tr = -tr; ti = -ti; tj = -tj; tk = -tk;
+// }
+
+// // q_rel = q_current * inverse(q_target)
+// int32_t rr = (cr * tr + ci * ti + cj * tj + ck * tk) >> Q_SHIFT;
+// int32_t ri = (-cr * ti + ci * tr - cj * tk + ck * tj) >> Q_SHIFT;
+
+// // Use sin(θ) ≈ 2 * r * i
+// int32_t sin_val = (2 * rr * ri) >> Q_SHIFT;
+
+// // Small angle approx: θ ≈ sin(θ), so angle in radians (Q14)
+// // Convert to degrees: (angle_rad * 180 / π) >> Q_SHIFT
+// // Precomputed constant: 180/π ≈ 23456 in Q14
+// int32_t angle = (sin_val * 23456) >> Q_SHIFT;
+
+// return (int16_t)angle; // degrees
+// }
+
 
 // int16_t compute_yaw_error(int16_t cr, int16_t ci, int16_t cj, int16_t ck,
 //     int16_t tr, int16_t ti, int16_t tj, int16_t tk)
@@ -375,13 +401,10 @@
 //     } while (!(feat_req[0] == 0x15 && feat_req[4] == 0xFC && feat_req[5] == 0x05 && feat_req[9] == 0x10));
 
       
-//     // bno085_tare_orientation(&hi2c2);
-//     // HAL_Delay(100);
-
-//     // uint8_t flush[32];
-//     // HAL_I2C_Master_Receive(&hi2c2, BNO08X_I2C_ADDR, flush, sizeof(flush), 100);
-
     
+//     bno085_clear_and_retare(&hi2c2);
+//     HAL_Delay(100);
+//     //bno085_tare_orientation(&hi2c2);
     
 //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, 1);
 
@@ -436,90 +459,61 @@
 //             int16_t err_roll  = compute_roll_error(cr, ci, cj, ck, tr, ti, tj, tk);
 //             int16_t err_yaw  = compute_yaw_error(cr, ci, cj, ck, tr, ti, tj, tk);
 //             int16_t err_pitch  = compute_pitch_error(cr, ci, cj, ck, tr, ti, tj, tk);
-           
-
+//             int16_t roll_out  = get_roll_deg(cr, ci, cj, ck, tr, ti, tj, tk);
 
 //             // char msg[32];
 //             // snprintf(msg, sizeof(msg), "err_roll: %d\r\n", err_roll);
 //             // HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 
             
-//             if (++loop_counter >= 100) {
-//                 uart_print_int(&huart1, err_roll);
+//             if (++loop_counter >= 300) {
+//                 uart_print_int(&huart1, roll_out);
 //                 loop_counter = 0;
 //             }
                
            
 
-
-//             // if((abs(err_yaw) >  1000) || (abs(err_pitch) > 2000))
+//             // if((err_yaw >  200) )
 //             // {   
-//             //     TIM3->PSC = 69;
-//             // }
-
-
-//             // if((abs(err_yaw) >  1000) || (abs(err_pitch) > 2000))
-//             // {
+//             //     TIM3->PSC = 150;
 //             //     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);  // set DIR
 //             //     TIM3->CCER |= TIM_CCER_CC1E;
 //             // }
-
-
-//             if(abs(err_yaw) >  1000)
-//             {   
-//                 TIM3->PSC = 69;
-//             }
-
-
-//             if(abs(err_yaw) >  1000)
-//             {
-//                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, ((err_roll > 0) ? GPIO_PIN_SET:GPIO_PIN_RESET));  // set DIR
-//                 TIM3->CCER |= TIM_CCER_CC1E;
-//             }
+//             // else if ((err_yaw < -200) )
+//             // {   
+//             //     TIM3->PSC = 150;
+//             //     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);  // reset DIR
+//             //     TIM3->CCER |= TIM_CCER_CC1E;
+//             // }
+//             // else
+//             // {
+//             //     TIM3->CCER &= ~TIM_CCER_CC1E;
+//             // }
 
 
 
-//             if((err_yaw >  1000))
-//             {   
-//                 TIM3->PSC = 69;
-//                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);  // set DIR
-//                 TIM3->CCER |= TIM_CCER_CC1E;
-//             }
-//             else if ((err_yaw < -1000))
-//             {   
-//                 TIM3->PSC = 69;
-//                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);  // reset DIR
-//                 TIM3->CCER |= TIM_CCER_CC1E;
-//             }
-//             else
-//             {
-//                 TIM3->CCER &= ~TIM_CCER_CC1E;
-//             }
-
-
-//             if(abs(err_roll) >= 1000)
+            
+//             if(err_roll >  200)
 //             { 
-//                 TIM2->PSC = 50;
-//             }
-//             else if(abs(err_roll) >= 500)
-//             { 
-//                 TIM2->PSC = 149;
-//             }
-//             else if(abs(err_roll) >= 100)
-//             { 
-//                 TIM2->PSC = 399;
-//             }
+                
 
-//             if (abs(err_roll) >= 100)
-//             {
-//                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, ((err_roll > 0) ? GPIO_PIN_RESET:GPIO_PIN_SET));  // reverse DIR
+//                 TIM2->PSC = 80;
+//                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET);  // set DIR
 //                 TIM2->CCER |= TIM_CCER_CC3E;
 //             }
-//             else
-//             {   
-//                 TIM2->CCER &= ~TIM_CCER_CC3E;
+            
+//            else if(err_roll < -200)
+//             {
+//                 TIM2->PSC = 80;
+//                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);  // reverse DIR
+//                 TIM2->CCER |= TIM_CCER_CC3E;
 //             }
 
+//             else
+//             {   
+                
+//                 TIM2->CCER &= ~TIM_CCER_CC3E;
+//             }
       
 //         }
         
