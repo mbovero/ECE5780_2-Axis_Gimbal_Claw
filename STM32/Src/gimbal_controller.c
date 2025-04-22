@@ -7,6 +7,7 @@
 #include "quaternion.h"
 #include "debugUART.h"
 #include "config.h"
+#include "joystick_led.h"
 
 // Parsed and Q14-formatted quaternion data representing TARGET orientation
 volatile int16_t ti, tj, tk, tr;    
@@ -31,6 +32,7 @@ int gimbal_controller(void)
     stm_bno085_i2c_init(&hi2c2); // Initialize GPIO pins and peripherals for IMU communication
     bno085_init(&hi2c2);         // Reset, initialize, and configure the IMU
     debugUART_init(&huart1);     // Initialize GPIO pins and peripherals for UART debugging
+    //joystick_init();             // Initialize joystick
 
     // Initialize pin as status LED
     GPIO_InitTypeDef initStrPB4_5 = {GPIO_PIN_4 | GPIO_PIN_5, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW};
@@ -76,6 +78,60 @@ int gimbal_controller(void)
 
 
 
+
+
+
+    __HAL_RCC_ADC1_CLK_ENABLE();
+    
+
+
+    // PC2 (vx) and PC3 (vy) as analog inputs
+    GPIO_InitTypeDef analogPins = {
+        .Pin = GPIO_PIN_3,
+        .Mode = GPIO_MODE_ANALOG,
+        .Pull = GPIO_NOPULL
+    };
+    HAL_GPIO_Init(GPIOC, &analogPins);
+
+    GPIO_InitTypeDef analogPins2 = {
+        .Pin = GPIO_PIN_5,
+        .Mode = GPIO_MODE_ANALOG,
+        .Pull = GPIO_NOPULL
+    };
+    HAL_GPIO_Init(GPIOA, &analogPins2);
+
+    // PA1 as digital input (override pin)
+    GPIO_InitTypeDef dioPin = {
+        .Pin = GPIO_PIN_1,
+        .Mode = GPIO_MODE_INPUT,
+        .Pull = GPIO_PULLUP  // assumes button pulls low when pressed
+    };
+    HAL_GPIO_Init(GPIOA, &dioPin);
+
+    // ADC config: 8-bit resolution, single conversion
+    ADC1->CFGR1 &= ~(ADC_CFGR1_RES | ADC_CFGR1_CONT | ADC_CFGR1_EXTEN);
+    ADC1->CFGR1 |= (0b10 << ADC_CFGR1_RES_Pos); // 8-bit resolution
+
+    // ADC calibration
+    if (ADC1->CR & ADC_CR_ADEN) {
+        ADC1->CR |= ADC_CR_ADDIS;
+    }
+    while (ADC1->CR & ADC_CR_ADEN);
+    ADC1->CR |= ADC_CR_ADCAL;
+    while (ADC1->CR & ADC_CR_ADCAL);
+
+    // Enable ADC
+    ADC1->CR |= ADC_CR_ADEN;
+    while (!(ADC1->ISR & ADC_ISR_ADRDY));
+
+
+
+
+
+
+
+
+
     // Use initial IMU rotation vector as target orientation
     bno085_read_rotation_vector(&hi2c2, &ci, &cj, &ck, &cr);
     ti = ci;
@@ -83,17 +139,22 @@ int gimbal_controller(void)
     tk = ck;
     tr = cr;
 
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+
+
+
     // Main while loop
     while (1)
     {
 
-        if (++uart_loop_counter >= 500) {
-            uart_print_int(&huart1, ti);
-            uart_print_int(&huart1, tj);
-            uart_print_int(&huart1, tk);
-            uart_print_int(&huart1, tr);
-            uart_loop_counter = 0;
-        }
+        // if (++uart_loop_counter >= 100) {
+        //     uart_print_int(&huart1, ti);
+        //     uart_print_int(&huart1, tj);
+        //     uart_print_int(&huart1, tk);
+        //     uart_print_int(&huart1, tr);
+        //     uart_loop_counter = 0;
+        // }
 
 
 
@@ -101,14 +162,82 @@ int gimbal_controller(void)
         {
             bno085_read_rotation_vector(&hi2c2, &ci, &cj, &ck, &cr);
 
+            //--- Read vx (PC0, CH10) ---
+            ADC1->CHSELR = ADC_CHSELR_CHSEL5;
+            ADC1->CR |= ADC_CR_ADSTART;
+            while (!(ADC1->ISR & ADC_ISR_EOC));
+            uint8_t vx = ADC1->DR;
+            HAL_Delay(1); 
+            // --- Read vy (PC3, CH13) ---
+            ADC1->CHSELR = ADC_CHSELR_CHSEL13;
+            ADC1->CR |= ADC_CR_ADSTART;
+            while (!(ADC1->ISR & ADC_ISR_EOC));
+            uint8_t vy = ADC1->DR;
+
+            
+            if (vy > 140)
+            {
+                vy = 140;
+            }
+           
+
+            uint8_t vy_abs = abs(vy);
+
+            if(abs(vy-70) >= 60)
+            { 
+                TIM2->PSC = 40;
+                //roll_motor_set_speed(950);
+            }
+            else if(abs(vy-70) >= 40)
+            { 
+                TIM2->PSC = 70;
+                //roll_motor_set_speed(700);
+            }
+            else if(abs(vy-70) >= 40)
+            { 
+                TIM2->PSC = 249;
+                //roll_motor_set_speed(500);
+            }
+        
+            if (abs(vy-70) >= 30)
+            {
+                (vy-70 > 0) ? roll_motor_set_dir(0) : roll_motor_set_dir(1);
+                roll_motor_resume();
+            }
+            else
+            {   
+                roll_motor_stop();
+            }
 
 
 
+            if(abs(vx-70) >= 60)
+            { 
+                TIM3->PSC = 40;
+                //roll_motor_set_speed(950);
+            }
+            else if(abs(vx-70) >= 40)
+            { 
+                TIM3->PSC = 80;
+                //roll_motor_set_speed(700);
+            }
+            
+        
+            if (abs(vx-70) >= 30)
+            {
+                (vx-70 > 0) ? yaw_motor_set_dir(0) : yaw_motor_set_dir(1);
+                yaw_motor_resume();
+            }
+            else
+            {   
+                yaw_motor_stop();
+            }
+        
 
         }
         else    // Gimbal Mode
         {   
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+            //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
             // Attempt to read quaternion data from IMU
             if (bno085_read_rotation_vector(&hi2c2, &ci, &cj, &ck, &cr))
             {
@@ -139,47 +268,46 @@ int gimbal_controller(void)
 
 void EXTI0_1_IRQHandler()
 {
-    // Check EXTI0 (PA0 User Button)
-    if (EXTI->PR & EXTI_PR_PR0) {
-        EXTI->PR |= EXTI_PR_PR0; // clear pending flag
-
-        manual_control = !manual_control;
-    
-        // If entering gimbal mode, set new target orientation
-        if (!manual_control)
-        {                    
-            // Current quaternion to be store after gimbal moves...
-            // int16_t ci, cj, ck, cr;
-            // while (!ci)
-            // {
-            //     bno085_read_rotation_vector(&hi2c2, &ci, &cj, &ck, &cr);
-            // }
-            ti = ci;
-            tj = cj;
-            tk = ck;
-            tr = cr;
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
-        }
-        else if(manual_control)    // If entering manual mode
-        { 
-            roll_motor_stop();
-            yaw_motor_stop();
-
-            
-            
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
-        }
-    }
+    static uint32_t last_interrupt_time_pa1 = 0;
+    static uint32_t last_interrupt_time_pa0 = 0;
+    uint32_t current_time = HAL_GetTick();
 
     // Check EXTI1 (PA1 Joystick Button)
     if (EXTI->PR & EXTI_PR_PR1) {
         EXTI->PR |= EXTI_PR_PR1; // clear pending flag
-        // your code for PA1 interrupt
-        roll_motor_stop();
-        yaw_motor_stop();
 
-        while(1);
+        if (current_time - last_interrupt_time_pa1 > 200) {
+            last_interrupt_time_pa1 = current_time;
+
+            manual_control = !manual_control;
+
+            if (!manual_control) {
+                ti = ci;
+                tj = cj;
+                tk = ck;
+                tr = cr;
+                HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+            } else {
+                roll_motor_stop();
+                yaw_motor_stop();
+                HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+            }
+        }
+    }
+
+    // Check EXTI0 (PA0 User Button)
+    if (EXTI->PR & EXTI_PR_PR0) {
+        EXTI->PR |= EXTI_PR_PR0; // clear pending flag
+
+        if (current_time - last_interrupt_time_pa0 > 200) {
+            last_interrupt_time_pa0 = current_time;
+
+            roll_motor_stop();
+            yaw_motor_stop();
+
+            while (1);
+        }
     }
 }

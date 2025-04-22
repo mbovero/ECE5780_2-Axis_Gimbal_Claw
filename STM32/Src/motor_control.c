@@ -105,12 +105,12 @@ void roll_motor_set_speed_direction(int16_t err_roll)
 {
     if(abs(err_roll) >= 1000)
     { 
-        TIM2->PSC = 40;
+        TIM2->PSC = 70;
         //roll_motor_set_speed(950);
     }
     else if(abs(err_roll) >= 500)
     { 
-        TIM2->PSC = 70;
+        TIM2->PSC = 80;
         //roll_motor_set_speed(700);
     }
     else if(abs(err_roll) >= 100)
@@ -162,7 +162,7 @@ void yaw_motor_set_speed_direction(int16_t err_yaw)
 {
     if(abs(err_yaw) >= 1000)
     {   
-        TIM3->PSC = 33;
+        TIM3->PSC = 50;
         //yaw_motor_set_speed(990);
     }
     else if(abs(err_yaw) >= 500)
