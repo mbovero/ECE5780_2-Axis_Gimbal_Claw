@@ -18,7 +18,7 @@ volatile int16_t ci, cj, ck, cr;
 I2C_HandleTypeDef hi2c2;
 
 // Status bit indicating current gimbal mode
-volatile uint8_t manual_control = 0;
+volatile uint8_t manual_control = 0;    // System starts in gimbal mode by default
 
 int gimbal_controller(void)
 {
@@ -26,7 +26,7 @@ int gimbal_controller(void)
     motor_init();                // Initialize GPIO pins and peripherals for motor control
     stm_bno085_i2c_init(&hi2c2); // Initialize GPIO pins and peripherals for IMU communication
     bno085_init(&hi2c2);         // Reset, initialize, and configure the IMU
-    //joystick_init();             // Initialize joystick
+    joystick_init();             // Initialize GPIO pins and peripherals for joystick interface
 
     
     // Initialize PB4 as manual mode LED indicator and PB5 as gimbal mode LED indicator
@@ -42,8 +42,8 @@ int gimbal_controller(void)
                                     GPIO_SPEED_FREQ_LOW};
     My_HAL_GPIO_Init(GPIOA, &initStrPA0);
 
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
     // Configure PA0 for EXTI0
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
     SYSCFG->EXTICR[0] &= ~(0xF);        // Set EXTI0 output to PA0
     EXTI->IMR |= EXTI_IMR_IM0;          // Enable interrupts on line 0
     EXTI->RTSR |= EXTI_RTSR_TR0;        // Enable rising edge trigger for line 0
@@ -54,72 +54,6 @@ int gimbal_controller(void)
 
 
 
-
-    // Initialize gpio pin PA1 for joystick button
-    GPIO_InitTypeDef initStrPA1 = {GPIO_PIN_1,
-        GPIO_MODE_INPUT,
-        GPIO_PULLUP,
-        GPIO_SPEED_FREQ_LOW};
-    My_HAL_GPIO_Init(GPIOA, &initStrPA1);       
-
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-    // Configure PA1 for EXTI1
-    SYSCFG->EXTICR[0] &= ~(0xF << 4);   // Set EXTI0 output to PA1
-    EXTI->IMR |= EXTI_IMR_IM1;          // Enable interrupts on line 1
-    EXTI->RTSR |= EXTI_RTSR_TR1;        // Enable rising edge trigger for line 1
-    NVIC_EnableIRQ(EXTI0_1_IRQn);       // Enable EXTI0 interrupt
-    NVIC_SetPriority(EXTI0_1_IRQn, 0);  // Set priority for EXTI0 to 0 (highest-priority)
-
-
-    __HAL_RCC_ADC1_CLK_ENABLE();
-
-    // PC2 (VRX) and PC3 (VRY) as analog inputs
-    GPIO_InitTypeDef analogPins = {
-        .Pin = GPIO_PIN_3,
-        .Mode = GPIO_MODE_ANALOG,
-        .Pull = GPIO_NOPULL
-    };
-    HAL_GPIO_Init(GPIOC, &analogPins);
-
-    GPIO_InitTypeDef analogPins2 = {
-        .Pin = GPIO_PIN_5,
-        .Mode = GPIO_MODE_ANALOG,
-        .Pull = GPIO_NOPULL
-    };
-    HAL_GPIO_Init(GPIOA, &analogPins2);
-
-    // PA1 as digital input (override pin)
-    GPIO_InitTypeDef dioPin = {
-        .Pin = GPIO_PIN_1,
-        .Mode = GPIO_MODE_INPUT,
-        .Pull = GPIO_PULLUP  // assumes button pulls low when pressed
-    };
-    HAL_GPIO_Init(GPIOA, &dioPin);
-
-    // ADC config: 8-bit resolution, single conversion
-    ADC1->CFGR1 &= ~(ADC_CFGR1_RES | ADC_CFGR1_CONT | ADC_CFGR1_EXTEN);
-    ADC1->CFGR1 |= (0b10 << ADC_CFGR1_RES_Pos); // 8-bit resolution
-
-    // ADC calibration
-    if (ADC1->CR & ADC_CR_ADEN) {
-        ADC1->CR |= ADC_CR_ADDIS;
-    }
-    while (ADC1->CR & ADC_CR_ADEN);
-    ADC1->CR |= ADC_CR_ADCAL;
-    while (ADC1->CR & ADC_CR_ADCAL);
-
-    // Enable ADC
-    ADC1->CR |= ADC_CR_ADEN;
-    while (!(ADC1->ISR & ADC_ISR_ADRDY));
-
-
-
-
-
-
-
-
-
     // Use initial IMU rotation vector as target orientation
     bno085_read_rotation_vector(&hi2c2, &ci, &cj, &ck, &cr);
     ti = ci;
@@ -127,9 +61,8 @@ int gimbal_controller(void)
     tk = ck;
     tr = cr;
 
-
+    // Turn on LED indicator for gimbal mode
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
-
 
 
     // Main while loop
@@ -140,64 +73,13 @@ int gimbal_controller(void)
             // Continue reading IMU data to keep quaternion data buffer from backing up
             bno085_read_rotation_vector(&hi2c2, &ci, &cj, &ck, &cr);
 
-            //--- Read VRX (PC0, CH10) ---
-            ADC1->CHSELR = ADC_CHSELR_CHSEL5;
-            ADC1->CR |= ADC_CR_ADSTART;
-            while (!(ADC1->ISR & ADC_ISR_EOC));
-            uint8_t vrx = ADC1->DR;
-            HAL_Delay(1); 
-            // --- Read VRY (PC3, CH13) ---
-            ADC1->CHSELR = ADC_CHSELR_CHSEL13;
-            ADC1->CR |= ADC_CR_ADSTART;
-            while (!(ADC1->ISR & ADC_ISR_EOC));
-            uint8_t vry = ADC1->DR;
+            // Read analog joystick inputs
+            uint8_t vrx, vry;
+            joystick_read_vrx_vry(&vrx, &vry);
 
-            if(abs(vry-70) >= 60)
-            { 
-                TIM2->PSC = 40;
-            }
-            else if(abs(vry-70) >= 40)
-            { 
-                TIM2->PSC = 70;
-            }
-            else if(abs(vry-70) >= 40)
-            { 
-                TIM2->PSC = 249;
-            }
-        
-            if (abs(vry-70) >= 30)
-            {
-                (vry-70 > 0) ? roll_motor_set_dir(0) : roll_motor_set_dir(1);
-                roll_motor_resume();
-            }
-            else
-            {   
-                roll_motor_stop();
-            }
-
-
-
-            if(abs(vrx-70) >= 60)
-            { 
-                TIM3->PSC = 40;
-            }
-            else if(abs(vrx-70) >= 40)
-            { 
-                TIM3->PSC = 80;
-            }
-            
-        
-            if (abs(vrx-70) >= 30)
-            {
-                (vrx-70 > 0) ? yaw_motor_set_dir(0) : yaw_motor_set_dir(1);
-                yaw_motor_resume();
-            }
-            else
-            {   
-                yaw_motor_stop();
-            }
-        
-
+            // Change motors' speed and direction based on joystick inputs
+            roll_motor_set_speed_dir_manual(vry);
+            yaw_motor_set_speed_dir_manual(vrx);
         }
         else    // Gimbal Mode
         {   
@@ -215,8 +97,8 @@ int gimbal_controller(void)
             int16_t err_yaw   = compute_yaw_error(cr, ci, cj, ck, tr, ti, tj, tk);
 
             // Change motors' speed and direction based on calculated error
-            roll_motor_set_speed_direction(err_roll);
-            yaw_motor_set_speed_direction(err_yaw);
+            roll_motor_set_speed_dir_gimbal(err_roll);
+            yaw_motor_set_speed_dir_gimbal(err_yaw);
             
             HAL_Delay(2);
         }
