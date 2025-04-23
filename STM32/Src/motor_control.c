@@ -1,5 +1,6 @@
 #include "motor_control.h"
 #include "config.h"
+#include <math.h>
 
 void motor_init()
 {
@@ -101,27 +102,46 @@ void motor_init()
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_2, GPIO_PIN_SET);     // DIR: 1
 }
 
-void roll_motor_set_speed_direction(int16_t err_roll)
+void roll_motor_set_speed_dir_gimbal(int16_t err_roll)
 {
     if(abs(err_roll) >= 1000)
     { 
         TIM2->PSC = 70;
-        //roll_motor_set_speed(950);
     }
     else if(abs(err_roll) >= 500)
     { 
         TIM2->PSC = 80;
-        //roll_motor_set_speed(700);
     }
     else if(abs(err_roll) >= 100)
     { 
         TIM2->PSC = 249;
-        //roll_motor_set_speed(500);
     }
 
     if (abs(err_roll) >= 100)
     {
         (err_roll > 0) ? roll_motor_set_dir(0) : roll_motor_set_dir(1);
+        roll_motor_resume();
+    }
+    else
+    {   
+        roll_motor_stop();
+    }
+}
+
+void roll_motor_set_speed_dir_manual(uint8_t vry)
+{
+    if(abs(vry-70) >= 60)
+    { 
+        TIM2->PSC = 40;
+    }
+    else if(abs(vry-70) >= 40)
+    { 
+        TIM2->PSC = 70;
+    }
+
+    if (abs(vry-70) >= 30)
+    {
+        (vry-70 > 0) ? roll_motor_set_dir(0) : roll_motor_set_dir(1);
         roll_motor_resume();
     }
     else
@@ -152,33 +172,47 @@ void roll_motor_set_dir(uint8_t direction)
     }
 }
 
-void roll_motor_set_speed(uint16_t speed)
-{    
-    // Set the timer prescaler
-    TIM2->PSC = speed_to_psc(speed);
-}
-
-void yaw_motor_set_speed_direction(int16_t err_yaw)
+void yaw_motor_set_speed_dir_gimbal(int16_t err_yaw)
 {
     if(abs(err_yaw) >= 1000)
     {   
         TIM3->PSC = 50;
-        //yaw_motor_set_speed(990);
     }
     else if(abs(err_yaw) >= 500)
     { 
         TIM3->PSC = 70;
-        //yaw_motor_set_speed(700);
     }
     else if(abs(err_yaw) >= 100)
     { 
         TIM3->PSC = 249;
-        //yaw_motor_set_speed(500);
     }
 
     if (abs(err_yaw) >= 100)
     {
         (err_yaw > 0) ? yaw_motor_set_dir(0) : yaw_motor_set_dir(1);
+        yaw_motor_resume();
+    }
+    else
+    {   
+        yaw_motor_stop();
+    }
+}
+
+void yaw_motor_set_speed_dir_manual(uint8_t vrx)
+{
+    if(abs(vrx-70) >= 60)
+    { 
+        TIM3->PSC = 40;
+    }
+    else if(abs(vrx-70) >= 40)
+    { 
+        TIM3->PSC = 80;
+    }
+    
+
+    if (abs(vrx-70) >= 30)
+    {
+        (vrx-70 > 0) ? yaw_motor_set_dir(0) : yaw_motor_set_dir(1);
         yaw_motor_resume();
     }
     else
@@ -207,22 +241,4 @@ void yaw_motor_set_dir(uint8_t direction)
     {
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, direction);
     }
-}
-
-void yaw_motor_set_speed(uint16_t speed)
-{    
-    // Set the timer prescaler
-    TIM3->PSC = speed_to_psc(speed);
-}
-
-uint16_t speed_to_psc(uint16_t speed)
-{
-    // Constrain input speed to valid range
-    if (speed > MAX_SPEED) 
-    {
-        speed = MAX_SPEED;
-    }
-
-    // Map speed inversely to PSC (higher speed = lower PSC)
-    return (MAX_PSC - ((speed / MAX_SPEED) * (MAX_PSC - MIN_PSC))) - 1;
 }
