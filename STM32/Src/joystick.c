@@ -30,19 +30,17 @@ void joystick_init()
     // PA5 (VRX) and PC3 (VRY) as analog inputs
     __HAL_RCC_ADC1_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
-    GPIO_InitTypeDef analogPins = {
-        .Pin = GPIO_PIN_3,
-        .Mode = GPIO_MODE_ANALOG,
-        .Pull = GPIO_NOPULL
-    };
-    HAL_GPIO_Init(GPIOC, &analogPins);
+    GPIO_InitTypeDef GPIO_InitStructAnalog1 = {GPIO_PIN_3, 
+                                                GPIO_MODE_ANALOG, 
+                                                GPIO_NOPULL, 
+                                                GPIO_SPEED_FREQ_LOW};
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStructAnalog1);
 
-    GPIO_InitTypeDef analogPins2 = {
-        .Pin = GPIO_PIN_5,
-        .Mode = GPIO_MODE_ANALOG,
-        .Pull = GPIO_NOPULL
-    };
-    HAL_GPIO_Init(GPIOA, &analogPins2);
+    GPIO_InitTypeDef GPIO_InitStructAnalog2 = {GPIO_PIN_5, 
+                                                GPIO_MODE_ANALOG, 
+                                                GPIO_NOPULL, 
+                                                GPIO_SPEED_FREQ_LOW};
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStructAnalog2);
 
     // PA1 as digital input (override pin)
     GPIO_InitTypeDef dioPin = {
