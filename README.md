@@ -20,12 +20,8 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 ## Hardware
 
-- STM32F0 microcontroller
-- 2 × NEMA 17 stepper motors
-- 2 × TMC2209 stepper drivers (custom configured)
-- BNO085 IMU (I2C communication)
-- 1 × Joystick module (2-axis with button)
-- GPIO-connected LED indicators
+- **Parts List** https://docs.google.com/spreadsheets/d/1ASUmAiZSFDpc-IezaZOCM-j6GSmX4DIoBAKoNAnrK8I/edit?gid=0#gid=0
+- **BOM** https://docs.google.com/spreadsheets/d/1F1Fa0VNCSiJDzJphaV6HfyEmqR7Gyjhc7J4WnCEqq48/edit?usp=sharing
 
 ## Control Logic
 
