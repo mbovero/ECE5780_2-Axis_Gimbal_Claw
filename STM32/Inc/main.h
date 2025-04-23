@@ -1,16 +1,6 @@
 #pragma once
 #include <stdint.h>
 
-int pwm_signal_gen(void);
-
-int blink_test(void);
-
-int joystick_led(void);
-
-int stm_imu_i2c_test(void);
-
-int test(void);
-
 int gimbal_controller(void);
 
 

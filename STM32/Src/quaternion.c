@@ -1,5 +1,4 @@
 #include "quaternion.h"
-#include "config.h"
 
 int16_t compute_roll_error(int16_t cr, int16_t ci, int16_t cj, int16_t ck, int16_t tr, int16_t ti, int16_t tj, int16_t tk) {
     // Numerator approximation: 2 * (r*i + j*k)

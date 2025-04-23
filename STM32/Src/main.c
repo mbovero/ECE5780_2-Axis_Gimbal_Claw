@@ -14,21 +14,7 @@
  */
 int main(void)
 {
-  #if defined(PWM_SIGNAL_GEN)
-  pwm_signal_gen();
-  #elif defined(STM_IMU_I2C)
-  stm_imu_i2c_main();
-  #elif defined(BLINK_TEST)
-  blink_test();
-  #elif defined(JOYSTICK_LED)
-  joystick_led();
-  #elif defined(STM_IMU_I2C_TEST)
-  stm_imu_i2c_test();
-  #elif defined(MOTOR_TEST_I2C)
-  motor_test_i2c();
-  #elif defined(TEST)
-  test();
-  #elif defined(GIMBAL_CONTROLLER)
+  #if defined(GIMBAL_CONTROLLER)
   gimbal_controller();
 
 
