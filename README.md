@@ -62,8 +62,8 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 ## Setup
 
 1. **Wiring:**
-   - Connect SDA/SCL of BNO085 to I2C2 (PB14/PB13).
-   - Connect joystick outputs to ADC pins (PC3/PA3).
+   - Connect SDA/SCL of BNO085 to I2C2 (`PB14`/`PB13`).
+   - Connect joystick outputs to ADC pins (`PC3`/`PA3`).
    - Wire EN, STEP, DIR, MS1, MS2 of each TMC2209 to GPIOs as defined in `motor_control.c`.
 
 2. **Flashing:**
