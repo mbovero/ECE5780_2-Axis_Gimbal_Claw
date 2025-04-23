@@ -119,17 +119,41 @@ void motor_init()
 void roll_motor_set_speed_dir_gimbal(int16_t err_roll)
 {
     // Dynamically adjust motor speed based on roll error
-    if(abs(err_roll) >= 1000)
+    if(abs(err_roll) >= 3000)
     { 
-        TIM2->PSC = 70;
+        TIM2->PSC = 39;
+    }
+    else if(abs(err_roll) >= 2500)
+    { 
+        TIM2->PSC = 49;
+    }
+    else if(abs(err_roll) >= 2000)
+    { 
+        TIM2->PSC = 59;
+    }
+    else if(abs(err_roll) >= 1500)
+    { 
+        TIM2->PSC = 69;
+    }
+    else if(abs(err_roll) >= 1000)
+    { 
+        TIM2->PSC = 79;
+    }
+    else if(abs(err_roll) >= 700)
+    { 
+        TIM2->PSC = 99;
     }
     else if(abs(err_roll) >= 500)
     { 
-        TIM2->PSC = 80;
+        TIM2->PSC = 149;
     }
-    else if(abs(err_roll) >= 100)
+    else if(abs(err_roll) >= 300)
     { 
         TIM2->PSC = 249;
+    }
+    else if(abs(err_roll) >= 200)
+    { 
+        TIM2->PSC = 349;
     }
 
     // When above a minimum threshold, set motor direction based on sign of roll error
@@ -228,17 +252,41 @@ void roll_motor_set_dir(uint8_t direction)
 void yaw_motor_set_speed_dir_gimbal(int16_t err_yaw)
 {
     // Dynamically adjust motor speed based on yaw error
-    if(abs(err_yaw) >= 1000)
+    if(abs(err_yaw) >= 3000)
     {   
-        TIM3->PSC = 50;
+        TIM3->PSC = 20;
+    }
+    else if(abs(err_yaw) >= 2500)
+    { 
+        TIM3->PSC = 25;
+    }
+    else if(abs(err_yaw) >= 2000)
+    { 
+        TIM3->PSC = 39;
+    }
+    else if(abs(err_yaw) >= 1500)
+    { 
+        TIM3->PSC = 69;
+    }
+    else if(abs(err_yaw) >= 1000)
+    { 
+        TIM3->PSC = 79;
+    }
+    else if(abs(err_yaw) >= 700)
+    { 
+        TIM3->PSC = 89;
     }
     else if(abs(err_yaw) >= 500)
     { 
-        TIM3->PSC = 70;
+        TIM3->PSC = 99;
     }
-    else if(abs(err_yaw) >= 100)
+    else if(abs(err_yaw) >= 300)
     { 
         TIM3->PSC = 249;
+    }
+    else if(abs(err_yaw) >= 200)
+    { 
+        TIM3->PSC = 349;
     }
 
     // When above a minimum threshold, set motor direction based on sign of yaw error
