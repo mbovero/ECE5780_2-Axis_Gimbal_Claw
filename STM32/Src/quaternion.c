@@ -4,9 +4,9 @@
  * 
  * This implementation uses fixed-point arithmetic to efficiently compute angular
  * errors between two orientations represented as quaternions. The goal is compute without
- * using trignometric functions or floating-point operations. Furthermore, this a a half-way
+ * using trigonometric functions or floating-point operations. Furthermore, this a a half-way
  * conversion between quaternions to euler angles (in 3-2-1 sequence). This conversion requires
- * trignometric functions and square root, which are being avoid entirely. With testing, it was found
+ * trigonometric functions and square root, which are being avoid entirely. With testing, it was found
  * that we have enough precision for reorentation/gimbal movements, without fully converting into Euler angles. 
  * 
  * Quaternion to Euler angles (in 3-2-1 sequence) conversion: 
