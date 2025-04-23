@@ -188,7 +188,7 @@ void bno085_init(I2C_HandleTypeDef *hi2c2)
 }
 
 //TODO change to signed ints?
-uint8_t bno085_read_rotation_vector(I2C_HandleTypeDef *hi2c2, int16_t *qi, int16_t *qj, int16_t *qk, int16_t *qr)
+volatile uint8_t bno085_read_rotation_vector(I2C_HandleTypeDef *hi2c2, int16_t *qi, int16_t *qj, int16_t *qk, int16_t *qr)
 {
     // Buffer for incoming data
     uint8_t data[32];
