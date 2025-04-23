@@ -1,7 +1,5 @@
 #include <stm32f0xx_hal.h>
 #include "main.h"
-#include <assert.h>
-#include "hal_gpio.h"
 #include "bno085.h"
 #include "motor_control.h"
 #include "quaternion.h"
@@ -20,6 +18,20 @@ I2C_HandleTypeDef hi2c2;
 // Status bit indicating current gimbal mode
 volatile uint8_t manual_control = 0;    // System starts in gimbal mode by default
 
+/**
+ * @brief  Main control loop for managing the gimbal system.
+ *
+ * This function handles both manual and automatic (gimbal mode) operation of the gimbal. 
+ * It initializes necessary peripherals, including motor control, IMU (BNO085), joystick interface, 
+ * and LED indicators. The function continuously reads joystick input for manual control or IMU data 
+ * for gimbal mode, calculates orientation errors, and adjusts motor movement to stabilize the gimbal.
+ * 
+ * In manual mode, the joystick directly controls motor movement. In gimbal mode, the system reads 
+ * quaternion data from the IMU, computes errors in the system’s orientation, and adjusts motor speed 
+ * and direction to minimize these errors.
+ * 
+ * @retval None
+ */
 int gimbal_controller(void)
 {
     HAL_Init();                  // Initialize HAL
@@ -40,7 +52,7 @@ int gimbal_controller(void)
                                     GPIO_MODE_INPUT,
                                     GPIO_PULLDOWN,
                                     GPIO_SPEED_FREQ_LOW};
-    My_HAL_GPIO_Init(GPIOA, &initStrPA0);
+    HAL_GPIO_Init(GPIOA, &initStrPA0);
 
     // Configure PA0 for EXTI0
     __HAL_RCC_SYSCFG_CLK_ENABLE();
@@ -70,7 +82,7 @@ int gimbal_controller(void)
     {
         if (manual_control)     // Manual mode (joystick control)
         {
-            // Continue reading IMU data to keep quaternion data buffer from backing up
+            // Continue reading from IMU to keep rotation vector quaternion data buffer clear
             bno085_read_rotation_vector(&hi2c2, &ci, &cj, &ck, &cr);
 
             // Read analog joystick inputs
@@ -105,8 +117,18 @@ int gimbal_controller(void)
     }
 }
 
+/**
+ * @brief  External interrupt handler for EXTI lines 0 and 1.
+ * 
+ * Handles two types of events:
+ * - EXTI1 (PA1 - Joystick button): Toggles between manual and gimbal control modes with debouncing.
+ * - EXTI0 (PA0 - User button): Acts as a kill switch to halt the system indefinitely.
+ * 
+ * Updates LED indicators accordingly and ensures safe motor control transitions.
+ */
 void EXTI0_1_IRQHandler()
 {
+    // Initialize variables for button debouncing
     static uint32_t last_interrupt_time_pa1 = 0;
     static uint32_t last_interrupt_time_pa0 = 0;
     uint32_t current_time = HAL_GetTick();
@@ -114,42 +136,50 @@ void EXTI0_1_IRQHandler()
     // Check EXTI1 (PA1 Joystick Button)
     if (EXTI->PR & EXTI_PR_PR1) 
     {
-        EXTI->PR |= EXTI_PR_PR1; // clear pending flag
+        EXTI->PR |= EXTI_PR_PR1; // Clear pending flag
 
-        if (current_time - last_interrupt_time_pa1 > 200) 
+        if (current_time - last_interrupt_time_pa1 > 200) // Debouncing
         {
             last_interrupt_time_pa1 = current_time;
 
+            // Toggle operation mode (gimbal <--> manual)
             manual_control = !manual_control;
 
             if (!manual_control) 
             {
+                // When transitioning from manual mode to gimbal mode, update target orientation
                 ti = ci;
                 tj = cj;
                 tk = ck;
                 tr = cr;
+                
+                // Disable manual mode LED indicator, and enable gimbal mode LED indicator
                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
             } else 
             {
+                // Enable manual mode LED indicator, and disable gimbal mode LED indicator
                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
             }
         }
     }
 
-    // Check EXTI0 (PA0 User Button)
+
+    // Check EXTI0 (PA0 User Button kill switch)
     if (EXTI->PR & EXTI_PR_PR0) 
     {
-        EXTI->PR |= EXTI_PR_PR0; // clear pending flag
+        EXTI->PR |= EXTI_PR_PR0; // Clear pending flag
 
-        if (current_time - last_interrupt_time_pa0 > 200) 
+        if (current_time - last_interrupt_time_pa0 > 200)   // Debouncing
         {
             last_interrupt_time_pa0 = current_time;
 
+            // Stop all motors
             roll_motor_stop();
             yaw_motor_stop();
 
+            // Stop the system forever (system reset required to resume)
             while (1);
         }
     }

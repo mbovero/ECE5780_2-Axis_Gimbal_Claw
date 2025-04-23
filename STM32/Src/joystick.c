@@ -1,5 +1,12 @@
 #include "joystick.h"
 
+/**
+ * @brief Initializes the joystick by setting up GPIOs and ADCs.
+ * 
+ * Configures GPIO pin for joystick button (PA1) as input with interrupt on rising edge. 
+ * Sets up analog inputs for VRX (PC2) and VRY (PC3) and configures the ADC for 8-bit resolution. 
+ * Also calibrates and enables ADC.
+ */
 void joystick_init()
 {
     // Initialize gpio pin PA1 for joystick button (SW)
@@ -8,10 +15,11 @@ void joystick_init()
         GPIO_MODE_INPUT,
         GPIO_PULLUP,
         GPIO_SPEED_FREQ_LOW};
-    My_HAL_GPIO_Init(GPIOA, &initStrPA1);       
+    HAL_GPIO_Init(GPIOA, &initStrPA1);   
+        
 
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
     // Configure PA1 for EXTI1
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
     SYSCFG->EXTICR[0] &= ~(0xF << 4);   // Set EXTI0 output to PA1
     EXTI->IMR |= EXTI_IMR_IM1;          // Enable interrupts on line 1
     EXTI->RTSR |= EXTI_RTSR_TR1;        // Enable rising edge trigger for line 1
@@ -61,15 +69,25 @@ void joystick_init()
     while (!(ADC1->ISR & ADC_ISR_ADRDY));    
 }
 
+/**
+ * @brief Reads the joystick's VRX and VRY analog values.
+ * 
+ * Performs ADC conversions for both VRX (PC0) and VRY (PC3) inputs and stores the results
+ * in the provided pointers. Each value is read sequentially with a short delay between.
+ * 
+ * @param vrx Pointer to store the VRX analog value (horizontal axis).
+ * @param vry Pointer to store the VRY analog value (vertical axis).
+ */
 void joystick_read_vrx_vry(uint8_t *vrx, uint8_t *vry)
 {
-    //--- Read VRX (PC0, CH10) ---
+    // Read VRX (PC0, CH10)
     ADC1->CHSELR = ADC_CHSELR_CHSEL5;
     ADC1->CR |= ADC_CR_ADSTART;
     while (!(ADC1->ISR & ADC_ISR_EOC));
     *vrx = ADC1->DR;
     HAL_Delay(1); 
-    // --- Read VRY (PC3, CH13) ---
+    
+    // Read VRY (PC3, CH13)
     ADC1->CHSELR = ADC_CHSELR_CHSEL13;
     ADC1->CR |= ADC_CR_ADSTART;
     while (!(ADC1->ISR & ADC_ISR_EOC));
