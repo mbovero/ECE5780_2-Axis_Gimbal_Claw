@@ -1,4 +1,3 @@
-# ECE5780_2-Axis_Gimbal
 ### Team Members
 * Miles Bovero
 * Lawrence Ponce
@@ -43,6 +42,22 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - `motor_control.c/h` – Low-level motor driver setup and PWM control for TIM2 and TIM3.
 - `quaternion.c/h` – Roll and yaw error computation from quaternion deltas.
 - `joystick.c/h` – ADC interface for reading joystick analog input.
+
+## Capabilities
+
+- Real-time stabilization on **roll and yaw axes** using quaternion feedback from the BNO085 IMU.
+- Smooth and responsive **manual control** through a 2-axis joystick.
+- Intelligent speed scaling and jitter prevention based on calculated orientation error.
+- Mode switching with hardware debouncing: easily toggle between manual and gimbal modes.
+- Visual mode indication via red (manual) and yellow (gimbal) LEDs, and a green LED for system readiness.
+- **Kill switch functionality** to safely disable the system at any time.
+
+### Limitations
+
+- The current mechanical setup limits **full-range roll rotation**. Due to the gimbal frame geometry, the roll axis cannot rotate completely or continuously without mechanical interference.
+- The system is designed for **partial stabilization**, not for continuous 360° roll.
+- All quaternion math is handled using **fixed-point arithmetic**, which prioritizes performance on the STM32F0 but limits precision.
+
 
 ## Setup
 
