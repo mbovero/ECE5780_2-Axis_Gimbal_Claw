@@ -2,6 +2,7 @@
 #define CONFIG_H
 
 // Constants for configuration
+
 #define Q_SHIFT             14       // Bit shift for fixed point quaternion scaling
 #define ROLL_THRESH         2500     // Threshold to start moving in roll direction
 #define YAW_THRESH          2500     // Threshold to start moving in yaw direction

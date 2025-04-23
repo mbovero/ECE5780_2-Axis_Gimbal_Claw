@@ -8,6 +8,7 @@
 #define BNO08X_I2C_DELAY    100          // Delay (in ms) used between I2C operations with the IMU
 
 // Function declarations
+
 void stm_bno085_i2c_init(I2C_HandleTypeDef *hi2c2);  // Initialize I2C and GPIO for BNO085
 void bno085_clr_buf(I2C_HandleTypeDef *hi2c2);       // Clear incoming I2C buffer
 void bno085_init(I2C_HandleTypeDef *hi2c2);          // Reset and configure BNO085
@@ -17,7 +18,9 @@ void bno085_clear_tare(I2C_HandleTypeDef *hi2c2);    // Clear current tare orien
 void bno085_tare_now(I2C_HandleTypeDef *hi2c2);      // Set current orientation as tare
 void bno085_tare_persist(I2C_HandleTypeDef *hi2c2);  // Save tare settings to non-volatile memory
 
+
 // I2C SHTP commands
+
 extern uint8_t BNO085_RESET_CMD[5];           // Command to reset IMU
 extern uint8_t BNO085_GET_PRODUCT_ID_CMD[6];  // Command to request product ID
 extern uint8_t BNO085_ROT_VEC_EN_CMD[21];     // Command to enable rotation vector output
