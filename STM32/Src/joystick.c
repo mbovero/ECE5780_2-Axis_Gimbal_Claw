@@ -27,7 +27,7 @@ void joystick_init()
     NVIC_SetPriority(EXTI0_1_IRQn, 0);  // Set priority for EXTI0 to 0 (highest-priority)
 
 
-    // PC2 (VRX) and PC3 (VRY) as analog inputs
+    // PA5 (VRX) and PC3 (VRY) as analog inputs
     __HAL_RCC_ADC1_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
     GPIO_InitTypeDef analogPins = {
