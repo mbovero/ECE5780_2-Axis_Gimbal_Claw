@@ -15,8 +15,9 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - **Custom driver logic** for TMC2209 stepper controllers (no libraries).
 - **Status indication** using onboard LEDs:
   - 🟢 **Green**: System ready
-  - 🔴 **Red**: Gimbal stabilization mode
   - 🟡 **Yellow**: Manual Mode
+  - 🔴 **Red**: Gimbal stabilization mode
+ 
 
 ## Hardware
 
