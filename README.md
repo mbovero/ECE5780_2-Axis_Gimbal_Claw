@@ -43,7 +43,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - `joystick.c/h` – ADC interface for reading joystick analog input.
 
 ## Flow Chart
-![Gimbal Front View](media/flowchart.jpg)
+![Functional Diagram](Media/flowchart.jpg)
 
 
 ## Capabilities
