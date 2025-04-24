@@ -28,7 +28,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 ## Control Logic
 
 - System starts in **gimbal mode**. The initial orientation is stored as the target.
-- A button press toggles between **manual** and **gimbal** mode.
+- A joystick button press toggles between **manual** and **gimbal** mode.
 - In **manual mode**, the joystick directly sets direction and speed of the motors.
 - In **gimbal mode**, real-time quaternion feedback from the IMU drives motors to minimize roll and yaw error.
 - A secondary button (`PA0`) acts as a **kill switch**, freezing the system until reset.
