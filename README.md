@@ -31,13 +31,13 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - A joystick button press toggles between **manual** and **gimbal** mode.
 - In **manual mode**, the joystick directly sets direction and speed of the motors.
 - In **gimbal mode**, real-time quaternion feedback from the IMU drives motors to minimize roll and yaw error.
-- The STM32 blue on-board button (`PA0`) acts as a **kill switch**, freezing the system until reset.
+- The STM32 blue on-board button acts as a **kill switch**, freezing the system until reset.
 
 ## Project Structure
 
 - `main.c` – Main call to control function.
 - `bno085.c/h` – IMU I2C interface and quaternion parsing logic.
-- `motor_control.c/h` – Low-level motor driver setup and PWM control for TIM2 and TIM3.
+- `motor_control.c/h` – Low-level motor driver setup and PWM control.
 - `quaternion.c/h` – Roll and yaw error computation from quaternion deltas.
 - `gimbal_controller.c/h` – Core application logic for managing gimbal behavior, mode switching, LED indicators, and overall control flow between manual and automatic stabilization.
 - `joystick.c/h` – ADC interface for reading joystick analog input.
@@ -47,7 +47,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - Real-time stabilization on **roll and yaw axes** using quaternion feedback from the BNO085 IMU.
 - Responsive **manual control** through a 2-axis joystick.
 - Intelligent speed scaling and jitter prevention based on calculated orientation error.
-- Mode switching with hardware debouncing: easily toggle between manual and gimbal modes.
+- Mode switching with software debouncing: easily toggle between manual and gimbal modes.
 - Visual mode indication via red (manual) and yellow (gimbal) LEDs, and a green LED for system readiness.
 - **Kill switch functionality** to safely disable the system at any time.
 
@@ -60,9 +60,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 ## Setup
 
 1. **Wiring:**
-   - Connect SDA/SCL of BNO085 to I2C2 (`PB14`/`PB13`).
-   - Connect joystick outputs to ADC pins (`PC3`/`PA3`).
-   - Wire EN, STEP, DIR, MS1, MS2 of each TMC2209 to GPIOs as defined in `motor_control.c`.
+   - **Wiring Diagram** 
 
 2. **Flashing:**
    - Use Platformio in VS Code to Flash board.
