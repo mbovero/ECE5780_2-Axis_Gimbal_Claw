@@ -6,7 +6,7 @@
   
 # 2-Axis Gimbal System using BNO085 and TMC2209
 
-This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors, a custom STM32F0-based driver, and the BNO085 IMU. The system supports both **manual joystick control** and **automatic gimbal stabilization** using quaternion feedback from the IMU.
+This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors, a custom TMC2209 stepper driver, and the BNO085 IMU. The system supports both **manual joystick control** and **automatic gimbal stabilization** using quaternion feedback from the IMU.
 
 ## Features
 
