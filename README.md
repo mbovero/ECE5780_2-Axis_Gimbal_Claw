@@ -1,4 +1,4 @@
-[Download demo video](Media/PreDemoDay_Demonstration.mov)
+[Download demo video](Media/PreDemoDay_Demonstration.gif)
 
 ### Team Members
 * Miles Bovero
