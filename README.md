@@ -1,3 +1,5 @@
+[Download demo video](Media/PreDemoDay_Demonstration.mov)
+
 ### Team Members
 * Miles Bovero
 * Lawrence Ponce
