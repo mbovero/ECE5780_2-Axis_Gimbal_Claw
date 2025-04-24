@@ -78,6 +78,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 
 ## 🔌 Wiring Connections
+![Wiring Diagram](Media/Wiring Diagram.jpg)
 
 ### STM32 → IMU Wiring
 
@@ -132,5 +133,4 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 | PB5       | Gimbal mode indicator LED  |
 
 ## Notes
-- Tare operations are handled at startup: the current orientation is set as the reference frame.
 - Quaternion values are in **Q14 format** and processed using fixed-point arithmetic to avoid floating-point dependency.
