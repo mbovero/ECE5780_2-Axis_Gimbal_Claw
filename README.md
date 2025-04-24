@@ -35,7 +35,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 ## Project Structure
 
-- `main.c` – Main loop, system initialization, and mode control logic.
+- `main.c` – Main call to control function.
 - `bno085.c/h` – IMU I2C interface and quaternion parsing logic.
 - `motor_control.c/h` – Low-level motor driver setup and PWM control for TIM2 and TIM3.
 - `quaternion.c/h` – Roll and yaw error computation from quaternion deltas.
