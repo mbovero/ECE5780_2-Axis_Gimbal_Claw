@@ -60,7 +60,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 ## Setup
 
 1. **Wiring:**
-   - **Wiring Diagram** 
+   - **Wiring Diagram** https://drive.google.com/file/d/1Tr6oJw9C9LlnuBq3UyTGPtjXQ-eJ-zLg/view?usp=sharing
 
 2. **Flashing:**
    - Use Platformio in VS Code to Flash board.
