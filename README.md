@@ -66,7 +66,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 2. **Flashing:**
    - Use Platformio in VS Code to Flash board.
-   - Make sure to set `PB3` as a status LED; it will blink on I2C failure.
+   - Run `platformio run -e gimbal_controller -t upload` in the Platformio terminal.
 
 3. **Start Sequence:**
    - Wait for the **green LED** to turn on (IMU ready).
