@@ -38,6 +38,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - `bno085.c/h` – IMU I2C interface and quaternion parsing logic.
 - `motor_control.c/h` – Low-level motor driver setup and PWM control for TIM2 and TIM3.
 - `quaternion.c/h` – Roll and yaw error computation from quaternion deltas.
+- `gimbal_controller.c/h` – Core application logic for managing gimbal behavior, mode switching, LED indicators, and overall control flow between manual and automatic stabilization.
 - `joystick.c/h` – ADC interface for reading joystick analog input.
 
 ## Capabilities
