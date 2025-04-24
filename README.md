@@ -42,6 +42,10 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - `gimbal_controller.c/h` – Core application logic for managing gimbal behavior, mode switching, LED indicators, and overall control flow between manual and automatic stabilization.
 - `joystick.c/h` – ADC interface for reading joystick analog input.
 
+## Flow Chart
+![Gimbal Front View](media/flowchart.jpg)
+
+
 ## Capabilities
 
 - Real-time stabilization on **roll and yaw axes** using quaternion feedback from the BNO085 IMU.
