@@ -78,7 +78,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 
 ## 🔌 Wiring Connections
-![Wiring Diagram](Media/Wiring Diagram.jpg)
+![Wiring Diagram](Media/WiringDiagram.jpg)
 
 ### STM32 → IMU Wiring
 
