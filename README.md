@@ -22,8 +22,8 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 ## Hardware
 
-- **Parts List** https://docs.google.com/spreadsheets/d/1ASUmAiZSFDpc-IezaZOCM-j6GSmX4DIoBAKoNAnrK8I/edit?gid=0#gid=0
-- **BOM** https://docs.google.com/spreadsheets/d/1F1Fa0VNCSiJDzJphaV6HfyEmqR7Gyjhc7J4WnCEqq48/edit?usp=sharing
+- **Parts List:** https://docs.google.com/spreadsheets/d/1ASUmAiZSFDpc-IezaZOCM-j6GSmX4DIoBAKoNAnrK8I/edit?gid=0#gid=0
+- **BOM:** https://docs.google.com/spreadsheets/d/1F1Fa0VNCSiJDzJphaV6HfyEmqR7Gyjhc7J4WnCEqq48/edit?usp=sharing
 
 ## Control Logic
 
@@ -64,7 +64,8 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 ## Setup
 
 1. **Wiring:**
-   - **Wiring Diagram** https://drive.google.com/file/d/1Tr6oJw9C9LlnuBq3UyTGPtjXQ-eJ-zLg/view?usp=sharing
+   - **Wiring Diagram:** https://drive.google.com/file/d/1Tr6oJw9C9LlnuBq3UyTGPtjXQ-eJ-zLg/view?usp=sharing
+   - See Wiring section below for more details
 
 2. **Flashing:**
    - Use Platformio in VS Code to Flash board.
@@ -73,8 +74,62 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 3. **Start Sequence:**
    - Wait for the **green LED** to turn on (IMU ready).
    - Press joystick button to toggle modes.
-   - Use the kill switch (`PA0`) to halt the system if needed.
+   - Use the kill switch (blue STM USER button) to halt the system if needed.
 
+
+## 🔌 Wiring Connections
+
+### STM32 → IMU Wiring
+
+| STM32 Pin | QT Cable Color | Function   |
+|-----------|----------------|------------|
+| 3V        | Red            | 3V3        |
+| GND       | Black          | GND        |
+| PB14      | Blue           | SDA / RX   |
+| PB13      | Yellow         | SCL / TX   |
+
+
+### STM32 → Motor Driver Wiring
+
+#### YAW Motor Driver
+
+| STM32 Pin | Motor Driver Pin |
+|-----------|------------------|
+| PC6       | STEP             |
+| PC7       | DIR              |
+| PC8       | MS1              |
+| PC9       | MS2              |
+| PA8       | ENN              |
+| GND       | GND              |
+
+#### ROLL Motor Driver
+
+| STM32 Pin | Motor Driver Pin |
+|-----------|------------------|
+| PB10      | STEP             |
+| PB2       | DIR              |
+| PB1       | MS1              |
+| PB0       | MS2              |
+| PC5       | ENN              |
+| GND       | GND              |
+
+### STM32 → Joystick Wiring
+
+| STM32 Pin | Joystick Pin |
+|-----------|--------------|
+| PC3       | VRY          |
+| PA5       | VRX          |
+| PA1       | SW           |
+| 3V        | 5V           |
+| GND       | GND          |
+
+### STM32 → LED Wiring
+
+| STM32 Pin | Function                   |
+|-----------|----------------------------|
+| PB3       | IMU status LED             |
+| PB4       | Manual mode indicator LED  |
+| PB5       | Gimbal mode indicator LED  |
 
 ## Notes
 - Tare operations are handled at startup: the current orientation is set as the reference frame.
