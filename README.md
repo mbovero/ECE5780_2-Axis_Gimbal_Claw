@@ -45,7 +45,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 ## Capabilities
 
 - Real-time stabilization on **roll and yaw axes** using quaternion feedback from the BNO085 IMU.
-- Smooth and responsive **manual control** through a 2-axis joystick.
+- Responsive **manual control** through a 2-axis joystick.
 - Intelligent speed scaling and jitter prevention based on calculated orientation error.
 - Mode switching with hardware debouncing: easily toggle between manual and gimbal modes.
 - Visual mode indication via red (manual) and yellow (gimbal) LEDs, and a green LED for system readiness.
