@@ -30,7 +30,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 - A button press toggles between **manual** and **gimbal** mode.
 - In **manual mode**, the joystick directly sets direction and speed of the motors.
 - In **gimbal mode**, real-time quaternion feedback from the IMU drives motors to minimize roll and yaw error.
-- A secondary button (PA0) acts as a **kill switch**, freezing the system until reset.
+- A secondary button (`PA0`) acts as a **kill switch**, freezing the system until reset.
 
 ## Project Structure
 
@@ -52,8 +52,7 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 ### Limitations
 
-- The current mechanical setup limits **full-range roll rotation**. Due to the gimbal frame geometry, the roll axis cannot rotate completely or continuously without mechanical interference.
-- The system is designed for **partial stabilization**, not for continuous 360° roll.
+- The current mechanical setup limits **full-range roll rotation**. Due to the gimbal frame geometry, the roll axis cannot rotate completely while maintatining yaw logic without mechanical interference.
 - All quaternion math is handled using **fixed-point arithmetic**, which prioritizes performance on the STM32F0 but limits precision.
 
 
@@ -71,10 +70,9 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 3. **Start Sequence:**
    - Wait for the **green LED** to turn on (IMU ready).
    - Press joystick button to toggle modes.
-   - Use the kill switch (PA0) to halt the system if needed.
+   - Use the kill switch (`PA0`) to halt the system if needed.
 
 
 ## Notes
 - Tare operations are handled at startup: the current orientation is set as the reference frame.
 - Quaternion values are in **Q14 format** and processed using fixed-point arithmetic to avoid floating-point dependency.
-- IMU communication is verified using product ID and feature request loops during initialization.
