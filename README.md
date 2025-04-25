@@ -84,12 +84,12 @@ This project implements a 2-axis gimbal system powered by NEMA 17 stepper motors
 
 ### STM32 → IMU Wiring
 
-| STM32 Pin | QT Cable Color | Function   |
-|-----------|----------------|------------|
-| 3V        | Red            | 3V3        |
-| GND       | Black          | GND        |
-| PB14      | Blue           | SDA / RX   |
-| PB13      | Yellow         | SCL / TX   |
+| STM32 Pin | IMU Pin    |
+|-----------|------------|
+| 3V        | 3V3        |
+| GND       | GND        |
+| PB14      | SDA / RX   |
+| PB13      | SCL / TX   |
 
 
 ### STM32 → Motor Driver Wiring
